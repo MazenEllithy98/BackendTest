@@ -17,12 +17,16 @@
 
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from faker import Faker
+import random
 from marshmallow import Schema, fields, post_load
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
 db = SQLAlchemy(app)
+fake = Faker()
 
+# Define the database models
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, index=True)
@@ -56,8 +60,34 @@ class Review(db.Model):
         self.comment = comment
         self.post_id = post_id
 
-db.create_all()
+def seed_database():
+    num_users = 1000  # Adjust as needed
+    num_posts = 50000  # Adjust as needed
+    num_reviews = 20000  # Adjust as needed
 
+    # Seed Users
+    for _ in range(num_users):
+        username = fake.user_name()
+        user = User(username=username)
+        db.session.add(user)
+
+    # Seed Posts
+    for _ in range(num_posts):
+        title = fake.sentence()
+        body = fake.paragraph()
+        user_id = random.randint(1, num_users)
+        post = Post(title=title, body=body, user_id=user_id)
+        db.session.add(post)
+
+    # Seed Reviews
+    for _ in range(num_reviews):
+        rate = random.randint(1, 5)
+        comment = fake.paragraph()
+        post_id = random.randint(1, num_posts)
+        review = Review(rate=rate, comment=comment, post_id=post_id)
+        db.session.add(review)
+
+    db.session.commit()
 class UserSchema(Schema):
     class Meta:
         fields = ['id', 'username']
@@ -139,8 +169,10 @@ def update_average_rate():
     return post_schema.jsonify(post)
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        seed_database()
     app.run(debug=True)
-
 
 
 #ERD 

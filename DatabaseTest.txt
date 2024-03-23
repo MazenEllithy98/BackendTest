@@ -1,0 +1,17 @@
+
+#Database
+# Given table 
+# Employee -> {id, salary}; id is the primary key
+# Write an SQL query to report the second highest salary from the Employee table. If there is no second highest salary, the query should report NULL.
+
+SELECT MAX(salary) AS second_highest_salary
+FROM (
+    SELECT salary
+    FROM Employee
+    WHERE salary < (
+        SELECT MAX(salary)
+        FROM Employee
+    )
+) AS second_highest_salaries
+
+# if there is no second highest salary the subquery will return null and the main query will also return null

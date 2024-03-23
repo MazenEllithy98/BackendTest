@@ -106,31 +106,28 @@ def add_post():
 
 @app.route('/api/posts/<int:user_id>', methods=['GET'])
 def get_user_posts(user_id):
+    page = request.args.get('page', 1, type=int)
+    page_size = request.args.get('size', 10, type=int)
     user = User.query.get_or_404(user_id)
-    posts = user.posts
-    return posts_schema.jsonify(posts)
+    posts = Post.query.filter_by(user_id=user_id).paginate(page, page_size, False)
+    return posts_schema.jsonify(posts.items)
 
 @app.route('/api/top_posts', methods=['GET'])
 def get_top_posts():
-    page = request.args.get('page', 0, type=int)
+    page = request.args.get('page', 1, type=int)
     page_size = request.args.get('size', 10, type=int)
     posts = Post.query.order_by(Post.average_rate.desc()).paginate(page, page_size, False)
-    return posts_schema.jsonify(posts)
-
-@app.route('/api/reviews', methods=['POST'])
-def add_review():
-    data = request.get_json()
-    review = Review(**data)
-    db.session.add(review)
-    db.session.commit()
-    return review_schema.jsonify(review)
+    return posts_schema.jsonify(posts.items)
 
 @app.route('/api/reviews/<int:post_id>', methods=['GET'])
 def get_reviews(post_id):
+    page = request.args.get('page', 1, type=int)
+    page_size = request.args.get('size', 10, type=int)
     post = Post.query.get_or_404(post_id)
-    return reviews_schema.jsonify(sorted(post.reviews, key=lambda x: x.id))
+    reviews = Review.query.filter_by(post_id=post_id).paginate(page, page_size, False)
+    return reviews_schema.jsonify(reviews.items)
 
-@app.route('/reviews/average_rate', methods=['POST'])
+@app.route('/api/reviews/average_rate', methods=['POST'])
 def update_average_rate():
     data = request.get_json()
     post_id = data['post_id']
@@ -139,7 +136,27 @@ def update_average_rate():
     current_reviews_count = len(post.reviews)
     post.average_rate = ((post.average_rate * current_reviews_count) + new_rate) / (current_reviews_count + 1)
     db.session.commit()
-    return review_schema.jsonify(Review(id=post_id, rate=post.average_rate))
+    return post_schema.jsonify(post)
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
+
+#ERD 
+# User
+# - id (PK)
+# - username
+
+# Post
+# - id (PK)
+# - title
+# - body
+# - user_id (FK to User)
+# - average_rate
+
+# Review
+# - id (PK)
+# - rate
+# - comment
+# - post_id (FK to Post)
